@@ -11,13 +11,13 @@
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
 [![Pillow](https://img.shields.io/badge/Pillow-10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://pillow.readthedocs.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/yourusername/blood-donation-connect-ai/ci.yml?branch=main&style=for-the-badge&label=CI%20Tests)](https://github.com/yourusername/blood-donation-connect-ai/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/rishitha0208/blood-donation-connect-ai/ci.yml?branch=main&style=for-the-badge&label=CI%20Tests)](https://github.com/rishitha0208/blood-donation-connect-ai/actions)
 
 **Track:** Agents for Good  
 **Tech Stack:** Python · Streamlit · SQLite · Pillow · Pandas  
 **Target Region:** India 🇮🇳
 
-[🚀 Live Demo](#-how-to-run-locally) · [📖 Features](#-key-features) · [🏗️ Architecture](#-system-architecture) · [📊 Screenshots](#-screenshots)
+[🚀 Quick Start](#-how-to-run-locally) · [📖 Features](#-key-features) · [🏗️ Architecture](#-system-architecture) · [📊 Screenshots](#-screenshots) · [🔗 GitHub](https://github.com/rishitha0208/blood-donation-connect-ai)
 
 </div>
 
@@ -230,7 +230,7 @@ Blood-Donation-Connect-AI/
 
 ### Step 1 — Clone the Repository
 ```bash
-git clone https://github.com/yourusername/blood-donation-connect-ai.git
+git clone https://github.com/rishitha0208/blood-donation-connect-ai.git
 cd blood-donation-connect-ai
 ```
 
@@ -341,7 +341,7 @@ Contributions, issues, and feature requests are welcome!
 
 ## 📜 License
 
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
+Distributed under the **MIT License**. See [LICENSE](https://github.com/rishitha0208/blood-donation-connect-ai/blob/main/LICENSE) for more information.
 
 ---
 
