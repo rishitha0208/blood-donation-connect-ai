@@ -1,0 +1,184 @@
+name: 🩸 Blood Donation Connect AI — CI Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint-and-test:
+    name: 🔍 Lint, Import & Smoke Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set Up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 📦 Cache pip Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-
+
+      - name: ⚙️ Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8
+
+      - name: 🎨 Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics \
+            --exclude=__pycache__,.git,.venv,venv
+          # Check for general style issues (warnings only, non-blocking)
+          flake8 . --count --exit-zero --max-complexity=12 --max-line-length=120 \
+            --statistics --exclude=__pycache__,.git,.venv,venv
+
+      - name: 🧪 Smoke Test — Module Imports
+        run: |
+          python -c "
+          print('--- Testing Module Imports ---')
+          import database as db
+          print('[OK] database.py imported successfully')
+          import ai_assistant as ai
+          print('[OK] ai_assistant.py imported successfully')
+          print('--- All imports passed ---')
+          "
+
+      - name: 🗃️ Smoke Test — Database Initialization
+        run: |
+          python -c "
+          import database as db
+          db.init_db()
+          stats = db.get_dashboard_stats()
+          assert stats['total_donors'] >= 0, 'Expected donor count >= 0'
+          assert stats['available_donors'] >= 0, 'Expected available count >= 0'
+          print(f'[OK] DB initialized. Total donors: {stats[\"total_donors\"]}')
+          print(f'[OK] Available donors: {stats[\"available_donors\"]}')
+          print(f'[OK] Active emergencies: {stats[\"active_emergencies\"]}')
+          print('[PASS] Database smoke test passed!')
+          "
+
+      - name: 🩸 Smoke Test — Blood Compatibility Engine
+        run: |
+          python -c "
+          import ai_assistant as ai
+
+          # Test compatibility matrix
+          compat = ai.get_compatible_groups('AB+')
+          assert len(compat) == 8, f'AB+ should receive from all 8 groups, got {len(compat)}'
+          print('[OK] AB+ is universal recipient - receives from all 8 groups')
+
+          compat_o_minus = ai.get_compatible_groups('O-')
+          assert 'O-' in compat_o_minus, 'O- should be in O- compatibility'
+          print('[OK] O- compatibility check passed')
+
+          # Test eligibility engine
+          eligible, reasons = ai.check_eligibility(25, 70, 'Male', 180, False, False, False, 13.5)
+          assert eligible == True, f'Healthy donor should be eligible, got reasons: {reasons}'
+          print('[OK] Eligibility engine: healthy donor correctly marked as ELIGIBLE')
+
+          eligible_fail, fail_reasons = ai.check_eligibility(16, 40, 'Male', 5, True, True, True, 10.0)
+          assert eligible_fail == False, 'Unhealthy donor should be deferred'
+          assert len(fail_reasons) > 0, 'Should have deferral reasons'
+          print(f'[OK] Eligibility engine: unhealthy donor correctly DEFERRED ({len(fail_reasons)} reasons)')
+
+          # Test badge system
+          badge = ai.get_donor_badge(0)
+          assert badge['title'] == 'Rakt Rookie'
+          badge_legend = ai.get_donor_badge(10)
+          assert badge_legend['title'] == 'Maha Donor'
+          print('[OK] Badge/gamification system working correctly')
+
+          # Test ETA simulation
+          dist, eta = ai.simulate_proximity_and_eta('Rahul', 'Mumbai', 'KEM Hospital', 'Mumbai')
+          assert dist > 0, 'Distance should be positive'
+          assert eta > 0, 'ETA should be positive'
+          print(f'[OK] ETA simulation: {dist} km, {eta} mins')
+
+          print('[PASS] All AI assistant smoke tests passed!')
+          "
+
+      - name: ✅ Build Summary
+        run: |
+          echo "================================================"
+          echo "✅ All CI checks passed for Python ${{ matrix.python-version }}"
+          echo "  - Module imports: OK"
+          echo "  - Database initialization: OK"
+          echo "  - Blood compatibility engine: OK"
+          echo "  - Eligibility AI engine: OK"
+          echo "  - ETA simulation engine: OK"
+          echo "  - Gamification system: OK"
+          echo "================================================"
+
+  security-scan:
+    name: 🔐 Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set Up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 🔐 Install Safety & Bandit
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety bandit
+
+      - name: 🛡️ Run Bandit Security Linter
+        run: |
+          bandit -r . -x ./.git,./venv,./__pycache__ --severity-level medium \
+            --confidence-level medium -f json -o bandit_report.json || true
+          echo "Bandit scan complete"
+
+      - name: 📄 Upload Security Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-report
+          path: bandit_report.json
+          retention-days: 7
+
+  docker-build:
+    name: 🐳 Docker Build Test
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐳 Check Dockerfile Exists (Skip if not present)
+        id: check_dockerfile
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "dockerfile_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "dockerfile_exists=false" >> $GITHUB_OUTPUT
+            echo "No Dockerfile found, skipping Docker build."
+          fi
+
+      - name: 🏗️ Build Docker Image (if Dockerfile exists)
+        if: steps.check_dockerfile.outputs.dockerfile_exists == 'true'
+        run: |
+          docker build -t blood-donation-connect-ai:${{ github.sha }} .
+          echo "Docker image built successfully!"
